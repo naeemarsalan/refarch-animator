@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Example — animated architecture storyboard</title>
+<style>
+  /* tokens — light, then dark via media query, then explicit host-toggle overrides */
+  :root {
+    --bg:#F1F1F1; --surface:#FFFFFF; --band:#E6E6E6; --zone:#EBEBEB; --subzone:#F7F7F7;
+    --ink:#151515; --ink2:#4C4C4C; --ink3:#595959; --line:#C7C7C7; --line-soft:#DBDBDB;
+    --zone-a:#1D4174; --zone-b:#4CB6D6;
+    --flow-1:#D97E13; --flow-2:#5E40BE; --flow-3:#2E93B8;
+    --ok:#63993D; --meter-bg:#EAEAEA;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg:#1B1B1B; --surface:#292929; --band:#141414; --zone:#232323; --subzone:#1F1F1F;
+    --ink:#F2F2F2; --ink2:#C7C7C7; --ink3:#A3A3A3; --line:#4D4D4D; --line-soft:#3A3A3A;
+    --zone-a:#6B93CB; --zone-b:#4CB6D6;
+    --flow-1:#FAAA4F; --flow-2:#9B85E8; --flow-3:#5BC0DE;
+    --ok:#8CC152; --meter-bg:#333333;
+  } }
+  :root[data-theme="light"] {
+    --bg:#F1F1F1; --surface:#FFFFFF; --band:#E6E6E6; --zone:#EBEBEB; --subzone:#F7F7F7;
+    --ink:#151515; --ink2:#4C4C4C; --ink3:#595959; --line:#C7C7C7; --line-soft:#DBDBDB;
+    --zone-a:#1D4174; --zone-b:#4CB6D6;
+    --flow-1:#D97E13; --flow-2:#5E40BE; --flow-3:#2E93B8;
+    --ok:#63993D; --meter-bg:#EAEAEA;
+  }
+  :root[data-theme="dark"] {
+    --bg:#1B1B1B; --surface:#292929; --band:#141414; --zone:#232323; --subzone:#1F1F1F;
+    --ink:#F2F2F2; --ink2:#C7C7C7; --ink3:#A3A3A3; --line:#4D4D4D; --line-soft:#3A3A3A;
+    --zone-a:#6B93CB; --zone-b:#4CB6D6;
+    --flow-1:#FAAA4F; --flow-2:#9B85E8; --flow-3:#5BC0DE;
+    --ok:#8CC152; --meter-bg:#333333;
+  }
+
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-size:16px; line-height:1.5;
+    font-family:-apple-system,'Segoe UI',Roboto,'Noto Sans',sans-serif; }
+  .mono { font-family:ui-monospace,'Cascadia Mono',Menlo,Consolas,monospace; }
+  .shell { max-width:1140px; margin:0 auto; padding:0 20px; }
+  header { background:var(--surface); border-bottom:1px solid var(--line-soft); padding:26px 0 20px; }
+  h1 { font-size:clamp(22px,3.5vw,30px); margin:0 0 6px; letter-spacing:-0.01em; }
+  .sub { color:var(--ink2); margin:0; max-width:70ch; }
+  main { padding:28px 0 48px; }
+
+  .player { background:var(--surface); border:1px solid var(--line-soft); }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 16px;
+    border-bottom:1px solid var(--line-soft); }
+  .controls button { font:inherit; font-weight:700; font-size:14px; background:var(--surface);
+    color:var(--ink); border:1px solid var(--line); padding:7px 15px; cursor:pointer; border-radius:2px; }
+  .controls button:hover { border-color:var(--ink2); }
+  .controls button:focus-visible { outline:2px solid var(--flow-3); outline-offset:2px; }
+  .stepnum { font-size:13.5px; color:var(--ink3); min-width:90px; text-align:center;
+    font-variant-numeric:tabular-nums; }
+  .dots { display:flex; flex-wrap:wrap; gap:6px; padding:10px 16px; }
+  .dots button { width:22px; height:8px; padding:0; border:none; background:var(--line-soft);
+    cursor:pointer; border-radius:1px; }
+  .dots button[aria-current="true"] { background:var(--flow-2); }
+  .dots button:focus-visible { outline:2px solid var(--flow-3); }
+
+  .stagewrap { overflow-x:auto; }
+  .stagewrap svg { display:block; min-width:1000px; width:100%; height:auto; }
+  svg text { font-family:inherit; fill:var(--ink); }
+  .zone   { fill:var(--zone); stroke:var(--zone-a); stroke-width:2; }
+  .subz   { fill:var(--subzone); stroke:var(--zone-b); stroke-width:1.6; }
+  .zlabel { font-size:11.5px; font-weight:700; letter-spacing:0.09em; fill:var(--ink2); }
+  .zsub   { font-size:10.5px; fill:var(--ink3); }
+  .node   { fill:var(--surface); stroke:var(--line); stroke-width:1.2; transition:stroke 0.3s; }
+  .frame  { fill:none; stroke:var(--line); stroke-width:1.2; stroke-dasharray:4 4; transition:stroke 0.3s; }
+  .ntitle { font-size:12.5px; font-weight:700; }
+  .nsub   { font-size:10.8px; fill:var(--ink2); }
+  .nport  { font-size:10.3px; fill:var(--ink3); }
+  .counter { font-size:12.5px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .flow   { fill:none; stroke-width:3; stroke-linejoin:round; opacity:0.16; transition:opacity 0.3s; }
+  .flow.on { opacity:1; }
+  .flow.p1 { stroke:var(--flow-1); }
+  .flow.p2 { stroke:var(--flow-2); }
+  .flow.p3 { stroke:var(--flow-3); }
+  .flabel { font-size:10.6px; }
+  .flabel.p1 { fill:var(--flow-1); } .flabel.p2 { fill:var(--flow-2); } .flabel.p3 { fill:var(--flow-3); }
+  .hot rect.node, rect.node.hot, .hot rect.frame { stroke:var(--flow-2); stroke-width:2.4; }
+  .ghost { opacity:0; transition:opacity 0.4s; }
+  .ghost.shown { opacity:1; }
+  .chip { fill:color-mix(in srgb, var(--ok) 20%, var(--surface)); stroke:var(--ok); stroke-width:1.2; }
+  .chiplabel { font-size:9.8px; fill:var(--ink2); }
+  .meter-track { fill:var(--meter-bg); stroke:var(--line); stroke-width:0.6; }
+  .meter-fill { fill:var(--flow-1); }
+  .anim-dot.p1 { fill:var(--flow-1); } .anim-dot.p2 { fill:var(--flow-2); } .anim-dot.p3 { fill:var(--flow-3); }
+
+  .caption { padding:16px 20px 20px; border-top:1px solid var(--line-soft); min-height:104px; }
+  .caption .ct { font-weight:700; font-size:16.5px; margin:0 0 6px; }
+  .caption .cb { font-size:14.6px; color:var(--ink2); margin:0; max-width:95ch; }
+  .legendband { background:var(--band); border-top:1px solid var(--line-soft); display:flex;
+    flex-wrap:wrap; gap:10px 26px; padding:12px 18px; font-size:13px; color:var(--ink2); }
+  .legendband .sw { display:inline-block; width:26px; height:10px; margin-right:8px; vertical-align:middle; }
+  footer { padding:18px 0 30px; font-size:13px; color:var(--ink3); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow, .ghost, .node, .frame { transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header><div class="shell">
+  <h1>Example — an autoscaling worker tier, step by step</h1>
+  <p class="sub">Demo page for the refarch-animator skill: one SVG stage, a steps
+  state machine, traveling dots, live counters, and <span class="mono">#step-N</span> deep links.</p>
+</div></header>
+
+<main class="shell">
+<div class="player">
+  <div class="controls">
+    <button id="btn-prev" aria-label="Previous step">◀ Prev</button>
+    <button id="btn-next" aria-label="Next step">Next ▶</button>
+    <button id="btn-play" aria-pressed="false" aria-label="Autoplay">▶ Play</button>
+    <button id="btn-link" aria-label="Copy a direct link to this step">Copy step link</button>
+    <span class="stepnum" id="stepnum">Step 1 / 9</span>
+  </div>
+  <div class="dots" id="stepdots" role="group" aria-label="Steps"></div>
+
+  <div class="stagewrap">
+  <svg id="stage" viewBox="0 0 1200 560" role="img" aria-label="Architecture stage">
+    <g id="b-clients"><rect class="node" x="30" y="200" width="140" height="70"></rect>
+      <text class="ntitle" x="40" y="224">Clients</text>
+      <text class="nsub" x="40" y="240">browsers · mobile</text>
+      <text class="nport mono" x="40" y="256">HTTPS 443</text></g>
+
+    <rect class="zone" x="210" y="40" width="960" height="490"></rect>
+    <text class="zlabel" x="224" y="64">CLOUD REGION — PRIMARY</text>
+    <text class="zsub" x="224" y="79">single region · autoscaling worker tier</text>
+
+    <rect class="subz" x="240" y="100" width="440" height="390"></rect>
+    <text class="zlabel" x="252" y="119" style="font-size:10.5px">APP NETWORK</text>
+
+    <g id="b-api"><rect class="node" x="270" y="150" width="160" height="80"></rect>
+      <text class="ntitle" x="280" y="168">api-gateway</text>
+      <text class="nsub" x="280" y="183">accepts uploads</text>
+      <text class="nport mono" x="280" y="199">POST /upload</text></g>
+
+    <g id="b-queue"><rect class="node" x="270" y="290" width="160" height="120"></rect>
+      <text class="ntitle" x="280" y="308">thumbnail queue</text>
+      <rect class="meter-track" x="280" y="318" width="140" height="12"></rect>
+      <rect class="meter-fill" id="meter" x="280" y="318" width="0" height="12"></rect>
+      <text class="counter" x="280" y="350">depth: <tspan id="c-depth">0</tspan></text>
+      <text class="nport mono" x="280" y="370">/metrics :9100</text>
+      <text class="nsub" x="280" y="386">jobs await workers</text></g>
+
+    <g id="b-metrics"><rect class="node" x="480" y="290" width="160" height="90"></rect>
+      <text class="ntitle" x="490" y="308">metrics collector</text>
+      <text class="nsub" x="490" y="323">scrapes queue depth</text>
+      <text class="nport mono" x="490" y="339">every 15s</text>
+      <text class="nsub" id="c-scrape" x="490" y="357"></text></g>
+
+    <g id="b-scaler"><rect class="node" x="480" y="130" width="160" height="100"></rect>
+      <text class="ntitle" x="490" y="148">autoscaler</text>
+      <text class="nsub" x="490" y="163">target: 50 jobs/worker</text>
+      <text class="nport mono" x="490" y="179">min 2 · max 6</text>
+      <text class="counter" x="490" y="199">desired: <tspan id="c-desired">2</tspan></text></g>
+
+    <rect class="subz" x="710" y="100" width="430" height="390"></rect>
+    <text class="zlabel" x="722" y="119" style="font-size:10.5px">WORKER POOL</text>
+
+    <g id="b-pool"><rect class="frame" x="740" y="150" width="370" height="250"></rect>
+      <text class="ntitle" x="750" y="168">thumbnail-workers</text>
+      <text class="counter" x="750" y="188">replicas: <tspan id="c-replicas">2</tspan></text>
+      <rect class="chip" x="755" y="210" width="100" height="40"></rect>
+      <text class="chiplabel" x="763" y="234">worker-1</text>
+      <rect class="chip" x="865" y="210" width="100" height="40"></rect>
+      <text class="chiplabel" x="873" y="234">worker-2</text>
+      <g id="g-w3" class="ghost"><rect class="chip" x="975" y="210" width="100" height="40"></rect>
+        <text class="chiplabel" x="983" y="234">worker-3</text></g>
+      <g id="g-w4" class="ghost"><rect class="chip" x="755" y="265" width="100" height="40"></rect>
+        <text class="chiplabel" x="763" y="289">worker-4</text></g>
+      <g id="g-w5" class="ghost"><rect class="chip" x="865" y="265" width="100" height="40"></rect>
+        <text class="chiplabel" x="873" y="289">worker-5</text></g>
+      <g id="g-w6" class="ghost"><rect class="chip" x="975" y="265" width="100" height="40"></rect>
+        <text class="chiplabel" x="983" y="289">worker-6</text></g>
+      <text class="nport mono" x="750" y="336">pulls jobs · writes thumbnails</text>
+      <text class="nsub" x="750" y="352">stateless · boot ~40s</text></g>
+
+    <path class="flow p1" id="f-req"    d="M170,235 H225 V190 H270"></path>
+    <path class="flow p1" id="f-enq"    d="M350,230 V290"></path>
+    <text class="flabel p1" x="360" y="266">enqueue job</text>
+    <path class="flow p3" id="f-scrape" d="M430,320 H480"></path>
+    <text class="flabel p3" x="436" y="283">GET /metrics · 15s</text>
+    <path class="flow p2" id="f-eval"   d="M560,290 V230"></path>
+    <text class="flabel p2" x="568" y="262">depth vs target</text>
+    <path class="flow p2" id="f-scale"  d="M640,165 H740"></path>
+    <text class="flabel p2" x="684" y="157">2→6</text>
+    <path class="flow p1" id="f-work"   d="M740,390 H430"></path>
+    <text class="flabel p1" x="600" y="404">pull jobs</text>
+  </svg>
+  </div>
+
+  <div class="caption" aria-live="polite">
+    <p class="ct" id="cap-title"></p>
+    <p class="cb" id="cap-body"></p>
+  </div>
+  <div class="legendband">
+    <span><span class="sw" style="background:var(--flow-1)"></span>Data plane</span>
+    <span><span class="sw" style="background:var(--flow-2)"></span>Control &amp; scale plane</span>
+    <span><span class="sw" style="background:var(--flow-3)"></span>Observability</span>
+  </div>
+</div>
+</main>
+
+<footer><div class="shell">Illustrative numbers. Generated with the refarch-animator skill —
+steps are absolute state, deep-linkable as <span class="mono">#step-N</span>.</div></footer>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var DEPTH_MAX = 500, GHOSTS = ['g-w3', 'g-w4', 'g-w5', 'g-w6'];
+  var HOT = ['b-clients', 'b-api', 'b-queue', 'b-metrics', 'b-scaler', 'b-pool'];
+
+  // Each step is ABSOLUTE state: every counter and ghost, every step.
+  var steps = [
+    { t: 'Steady state',
+      b: 'Two workers keep up with normal traffic; the queue is empty and the autoscaler is idle at its minimum.',
+      hot: ['b-queue', 'b-pool'], flows: [], depth: 0, desired: 2, replicas: 2, ghosts: [] },
+    { t: 'A traffic spike hits',
+      b: 'Uploads arrive faster than two workers can process. The api-gateway keeps enqueueing; depth climbs to 480.',
+      hot: ['b-clients', 'b-api', 'b-queue'], flows: [['f-req', false], ['f-enq', false]],
+      depth: 480, desired: 2, replicas: 2, ghosts: [] },
+    { t: 'The queue exposes its depth',
+      b: 'The queue serves its depth as a metric on /metrics — the demand signal everything downstream consumes.',
+      hot: ['b-queue'], flows: [], depth: 480, desired: 2, replicas: 2, ghosts: [] },
+    { t: 'The collector scrapes',
+      b: 'Every 15s the metrics collector scrapes the queue and stores the latest reading.',
+      hot: ['b-queue', 'b-metrics'], flows: [['f-scrape', false]],
+      depth: 480, desired: 2, replicas: 2, ghosts: [], scrape: 'last reading: 480' },
+    { t: 'The autoscaler evaluates',
+      b: 'The autoscaler compares depth to its target of 50 jobs per worker: 480 / 50 ≈ 9.6 workers wanted, capped at max 6.',
+      hot: ['b-metrics', 'b-scaler'], flows: [['f-eval', false]],
+      depth: 480, desired: 6, replicas: 2, ghosts: [], scrape: 'last reading: 480' },
+    { t: 'Scale out',
+      b: 'The autoscaler sets the pool to 6 replicas. Four new stateless workers boot in about 40 seconds each.',
+      hot: ['b-scaler', 'b-pool'], flows: [['f-scale', false]],
+      depth: 480, desired: 6, replicas: 6, ghosts: GHOSTS },
+    { t: 'Workers drain the queue',
+      b: 'Six workers pull jobs concurrently; depth falls fast. The scrape/evaluate loop keeps running in the background.',
+      hot: ['b-pool', 'b-queue'], flows: [['f-work', false]],
+      depth: 120, desired: 6, replicas: 6, ghosts: GHOSTS },
+    { t: 'Backlog cleared',
+      b: 'Depth reaches 0 — under target even for two workers. Desired falls back to the minimum and the cooldown timer starts.',
+      hot: ['b-queue', 'b-scaler'], flows: [['f-work', false]],
+      depth: 0, desired: 2, replicas: 6, ghosts: GHOSTS, scrape: 'last reading: 0' },
+    { t: 'Scale in',
+      b: 'After the cooldown the surplus workers terminate and the pool returns to 2. Steady state restored — ready for the next spike.',
+      hot: ['b-scaler', 'b-pool'], flows: [['f-scale', true]],
+      depth: 0, desired: 2, replicas: 2, ghosts: [] }
+  ];
+
+  var cur = 0, playing = false, playTimer = null, initialized = false;
+  var stage = $('stage'), dotLayer = null, animHandle = null, animDots = [], tweenHandle = null;
+
+  var dotsBox = $('stepdots');
+  steps.forEach(function (s, i) {
+    var b = document.createElement('button');
+    b.setAttribute('aria-label', 'Step ' + (i + 1) + ': ' + s.t);
+    b.addEventListener('click', function () { stopPlay(); go(i); });
+    dotsBox.appendChild(b);
+  });
+
+  function clearDots() {
+    if (animHandle) cancelAnimationFrame(animHandle);
+    animHandle = null;
+    animDots.forEach(function (d) { d.el.remove(); });
+    animDots = [];
+  }
+
+  function startDots(flowSpecs) {
+    clearDots();
+    if (reduced || !flowSpecs.length) return;
+    if (!dotLayer) {
+      dotLayer = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      stage.appendChild(dotLayer);
+    }
+    flowSpecs.forEach(function (spec, fi) {
+      var path = $(spec[0]); if (!path) return;
+      var len = path.getTotalLength();
+      var plane = path.classList.contains('p1') ? 'p1' : (path.classList.contains('p3') ? 'p3' : 'p2');
+      var n = Math.max(2, Math.min(4, Math.round(len / 140)));
+      for (var k = 0; k < n; k++) {
+        var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('class', 'anim-dot ' + plane);
+        c.setAttribute('r', '5');
+        dotLayer.appendChild(c);
+        animDots.push({ el: c, path: path, len: len, rev: !!spec[1], off: (k / n) + fi * 0.13, speed: 90 / len });
+      }
+    });
+    var last = performance.now();
+    function tick(now) {
+      var dt = (now - last) / 1000; last = now;
+      animDots.forEach(function (d) {
+        d.off = (d.off + d.speed * dt) % 1;
+        var at = d.rev ? (1 - d.off) * d.len : d.off * d.len;
+        var p = d.path.getPointAtLength(at);
+        d.el.setAttribute('cx', p.x); d.el.setAttribute('cy', p.y);
+      });
+      animHandle = requestAnimationFrame(tick);
+    }
+    animHandle = requestAnimationFrame(tick);
+  }
+
+  function tweenDepth(target) {
+    if (tweenHandle) cancelAnimationFrame(tweenHandle);
+    var cEl = $('c-depth'), mEl = $('meter');
+    var from = parseInt(cEl.textContent.replace(/,/g, ''), 10) || 0;
+    var t0 = performance.now(), dur = reduced ? 0 : 600;
+    function frame(now) {
+      var k = dur ? Math.min(1, (now - t0) / dur) : 1;
+      var v = Math.round(from + (target - from) * k);
+      cEl.textContent = v.toLocaleString('en-US');
+      mEl.setAttribute('width', Math.max(0, Math.min(140, 140 * v / DEPTH_MAX)));
+      tweenHandle = k < 1 ? requestAnimationFrame(frame) : null;
+    }
+    tweenHandle = requestAnimationFrame(frame);
+  }
+
+  function go(i) {
+    cur = (i + steps.length) % steps.length;
+    var s = steps[cur];
+    $('stepnum').textContent = 'Step ' + (cur + 1) + ' / ' + steps.length;
+    $('cap-title').textContent = (cur + 1) + '. ' + s.t;
+    $('cap-body').textContent = s.b;
+    Array.prototype.forEach.call(dotsBox.children, function (d, di) {
+      if (di === cur) d.setAttribute('aria-current', 'true'); else d.removeAttribute('aria-current');
+    });
+    HOT.forEach(function (id) { $(id).classList.remove('hot'); });
+    (s.hot || []).forEach(function (id) { $(id).classList.add('hot'); });
+    document.querySelectorAll('#stage .flow').forEach(function (p) { p.classList.remove('on'); });
+    (s.flows || []).forEach(function (spec) { var p = $(spec[0]); if (p) p.classList.add('on'); });
+    tweenDepth(s.depth);
+    $('c-desired').textContent = s.desired;
+    $('c-replicas').textContent = s.replicas;
+    GHOSTS.forEach(function (id) { $(id).classList.toggle('shown', (s.ghosts || []).indexOf(id) !== -1); });
+    $('c-scrape').textContent = s.scrape || '';
+    startDots(s.flows || []);
+    if (initialized) {
+      try { history.replaceState(null, '', '#step-' + (cur + 1)); } catch (err) {}
+    }
+  }
+
+  function stopPlay() {
+    playing = false;
+    if (playTimer) clearInterval(playTimer);
+    var b = $('btn-play');
+    b.setAttribute('aria-pressed', 'false');
+    b.textContent = '▶ Play';
+  }
+  $('btn-prev').addEventListener('click', function () { stopPlay(); go(cur - 1); });
+  $('btn-next').addEventListener('click', function () { stopPlay(); go(cur + 1); });
+  $('btn-play').addEventListener('click', function () {
+    if (playing) { stopPlay(); return; }
+    playing = true;
+    this.setAttribute('aria-pressed', 'true');
+    this.textContent = '⏸ Pause';
+    if (cur === steps.length - 1) go(0);
+    playTimer = setInterval(function () {
+      if (cur === steps.length - 1) { stopPlay(); return; }
+      go(cur + 1);
+    }, 7000);
+  });
+
+  $('btn-link').addEventListener('click', function () {
+    var self = this;
+    var url = location.href.split('#')[0] + '#step-' + (cur + 1);
+    try { history.replaceState(null, '', '#step-' + (cur + 1)); } catch (err) {}
+    function done(ok) {
+      self.textContent = ok ? 'Copied' : 'Link in address bar';
+      setTimeout(function () { self.textContent = 'Copy step link'; }, 1600);
+    }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (err) {}
+      ta.remove(); done(ok);
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(url).then(function () { done(true); }, fallback);
+    } else { fallback(); }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    var t = e.target;
+    if (t && t.closest && t.closest('input, textarea, select, .stagewrap')) return;
+    var r = document.querySelector('.player').getBoundingClientRect();
+    if (r.bottom < 80 || r.top > window.innerHeight - 80) return;
+    e.preventDefault();
+    stopPlay();
+    go(e.key === 'ArrowLeft' ? cur - 1 : cur + 1);
+  });
+
+  function applyHash() {
+    var m = /^#step-(\d+)$/.exec(location.hash);
+    if (!m) return;
+    var n = Math.min(steps.length, Math.max(1, parseInt(m[1], 10)));
+    stopPlay();
+    go(n - 1);
+    document.querySelector('.player').scrollIntoView();
+  }
+
+  go(0);
+  initialized = true;
+  applyHash();
+  window.addEventListener('hashchange', applyHash);
+})();
+</script>
+</body>
+</html>
