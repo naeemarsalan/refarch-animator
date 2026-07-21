@@ -5,7 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Example — animated architecture storyboard</title>
 <style>
-  /* tokens — light, then dark via media query, then explicit host-toggle overrides */
+  /* fonts:begin */
+  /* system font stack by default — scripts/embed_fonts.py --inject replaces this block */
+  /* fonts:end */
+  /* KEEP: tokens — light, then dark via media query, then explicit host-toggle overrides */
   :root {
     --bg:#F1F1F1; --surface:#FFFFFF; --band:#E6E6E6; --zone:#EBEBEB; --subzone:#F7F7F7;
     --ink:#151515; --ink2:#4C4C4C; --ink3:#595959; --line:#C7C7C7; --line-soft:#DBDBDB;
@@ -122,6 +125,9 @@
   <div class="dots" id="stepdots" role="group" aria-label="Steps"></div>
 
   <div class="stagewrap">
+  <!-- EDIT: the stage — replace zones/nodes/paths/counters with your topology.
+       Keep the class vocabulary (zone/subz/node/frame/chip/flow p1..p3/ghost)
+       and the id conventions (b-* components, f-* flows, c-* counters, g-* ghosts). -->
   <svg id="stage" viewBox="0 0 1200 560" role="img" aria-label="Architecture stage">
     <g id="b-clients"><rect class="node" x="30" y="200" width="140" height="70"></rect>
       <text class="ntitle" x="40" y="224">Clients</text>
@@ -215,6 +221,9 @@ steps are absolute state, deep-linkable as <span class="mono">#step-N</span>.</d
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ===== EDIT: scenario state — this block and go()'s counter wiring are all
+  // that changes per page; everything past "KEEP: player machinery" is fixed.
   var DEPTH_MAX = 500, GHOSTS = ['g-w3', 'g-w4', 'g-w5', 'g-w6'];
   var HOT = ['b-clients', 'b-api', 'b-queue', 'b-metrics', 'b-scaler', 'b-pool'];
 
@@ -256,6 +265,7 @@ steps are absolute state, deep-linkable as <span class="mono">#step-N</span>.</d
       depth: 0, desired: 2, replicas: 2, ghosts: [] }
   ];
 
+  // ===== KEEP: player machinery — identical in every generated page =====
   var cur = 0, playing = false, playTimer = null, initialized = false;
   var stage = $('stage'), dotLayer = null, animHandle = null, animDots = [], tweenHandle = null;
 

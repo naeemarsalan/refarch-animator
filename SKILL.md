@@ -1,6 +1,6 @@
 ---
 name: refarch-animator
-description: Generate an animated reference-architecture page — layered diagram views (logical, schematic) plus a step-by-step animated storyboard of one scenario — as a single self-contained HTML file. Use when the user asks for an architecture diagram with animation, a "slide by slide" walkthrough of how a workload/request/failover moves through a system, or a polished reference-architecture deliverable they can host anywhere.
+description: Generate an animated reference-architecture page — layered diagram views plus a step-by-step animated storyboard — as one self-contained HTML file. Use for architecture diagrams with animation, "slide by slide" system walkthroughs, or polished reference-architecture deliverables.
 ---
 
 # Animated reference-architecture pages
@@ -49,14 +49,20 @@ under `@media (prefers-color-scheme: dark)`, then again under
 `:root[data-theme="dark"]` and `:root[data-theme="light"]` so a host page's
 theme toggle wins in both directions. Style components only through tokens.
 
-Read `references/style-guide.md` for the full visual grammar and a validated
-default palette (zone borders by domain, flow-plane colors, neutrals for both
-themes). The grammar in one breath: flat square-cornered zones on a quiet gray
-canvas, white component nodes with thin borders, ALL-CAPS zone labels /
-sentence-case component names, orthogonal 3px connectors color-coded by plane,
-dashed borders for planned or torn-down elements, a footer legend band. Fonts:
-system stack by default; `scripts/embed_fonts.py` can inline open-source faces
-as data URIs when brand typography matters.
+The grammar in one breath: flat square-cornered zones on a quiet gray canvas,
+white component nodes with thin borders, ALL-CAPS zone labels / sentence-case
+component names, orthogonal 3px connectors color-coded by plane, dashed borders
+for planned or torn-down elements, a footer legend band. The template you copy
+in step 2 already carries the full validated palette as CSS tokens — that plus
+this summary is enough for most pages. Open `references/style-guide.md` only
+when you need the reasoning behind the grammar or are adapting the palette to a
+user's brand.
+
+Fonts: system stack by default. When brand typography matters, run
+`scripts/embed_fonts.py --inject <page> "Family:400,700"` — it downloads
+open-source faces and splices the data-URI `@font-face` CSS directly into the
+file. Base64 must never pass through your context: don't cat the CSS, don't
+paste blobs into Write/Edit.
 
 ## Step 2 — build the views
 
@@ -66,17 +72,22 @@ as data URIs when brand typography matters.
   `overflow-x:auto` and a `min-width` so phones scroll instead of squishing.
   Zones are `<rect>`s with labels top-left; components are white `<rect>`s with
   2–5 `<text>` lines; connectors are `<path>` with only `H`/`V` segments.
-- **Detail/storyboard**: a second, simpler SVG laid out left-to-right in
-  scenario order, plus the player. Implement the player from
-  `references/storyboard-pattern.md` — it specifies the steps data shape, the
-  dot animator, counter tweens, ghost elements, `#step-N` deep links, a
-  copy-link button, autoplay, ARIA, and `prefers-reduced-motion` behavior.
-  `references/template.html` is a small complete working example — read it
-  before writing your own player rather than reinventing it.
+- **Detail/storyboard**: **start by copying the working example — do not write
+  the player from scratch.** `cp references/template.html <output>.html`, then
+  edit in place: replace the demo stage SVG (topology, counters, ghosts) and
+  the `steps` array, adjust the masthead/legend copy, and add the other
+  sections around the player. The CSS tokens and everything below the
+  `KEEP: player machinery` comment in the script stay as they are — they're
+  boilerplate that is identical in every page. You don't need to read the whole
+  template into context; the `EDIT`/`KEEP` comments mark what changes. Consult
+  `references/storyboard-pattern.md` (a short adaptation checklist) only when
+  your scenario needs mechanics the template lacks.
 
 ## Step 3 — geometry discipline (where these pages actually fail)
 
-SVG has no layout engine; you are the layout engine. Budget before drawing:
+SVG has no layout engine; you are the layout engine. `scripts/validate.py`
+re-checks all of this mechanically afterwards, but budgeting while you draw is
+cheaper than fixing warnings later:
 
 - **Text width**: estimate ~0.60em per character (≈6.2 px at font-size 10.5–12.5).
   Every `<text>` must fit `box_width − 2×padding`. Shorten the string or widen
@@ -94,22 +105,28 @@ SVG has no layout engine; you are the layout engine. Budget before drawing:
   panel can carry detail the diagram can't).
 - Everything must stay inside the `viewBox`, and children inside their parent zone.
 
-## Step 4 — validate, then adversarially review
+## Step 4 — validate, then review (inline, bounded)
 
-1. Run `python3 scripts/validate.py <page.html>` — checks tag balance, that
-   every id referenced from the script exists, anchor targets resolve, and JS
-   syntax (if `node` is available).
-2. Re-check the geometry rules above against your actual coordinates —
-   arithmetic, not vibes. The five recurring bugs: text overflowing a box, a
-   path cutting through a box, a label sitting on a box, a path endpoint
-   floating short of its box, and a storyboard step whose caption promises a
-   state change the stage data doesn't show.
-3. If the architecture came from a real codebase or document, verify every
-   number and name in the page against the source before shipping — wrong
-   figures in a polished page are worse than no figures.
-4. Walk every storyboard step: highlighted boxes match the caption's actors,
-   active flows match the movement described, counters end where the next step
-   expects them.
+1. Run `python3 scripts/validate.py <page.html>`. It checks structure (tag
+   balance, script id references, anchors, JS syntax) **and geometry** — text
+   overflowing boxes, labels sitting on boxes, paths cutting through boxes,
+   endpoints floating off box edges, viewBox escapes. Fix errors; treat
+   warnings as pointers and confirm each with arithmetic (widths are
+   estimates) before moving a coordinate. Two fix-and-rerun cycles is
+   normally enough — if warnings persist past that, they're probably
+   tolerable near-edge estimates; say so and stop.
+2. Walk every storyboard step **from the steps array you just wrote — do not
+   re-Read the finished file**: highlighted boxes match the caption's actors,
+   active flows match the movement described, counters and ghosts show every
+   state change the caption claims, and each step's end state is where the
+   next step starts.
+3. If the architecture came from a real codebase or document, verify the
+   numbers and names you put in the page against the source before shipping —
+   wrong figures in a polished page are worse than no figures. Keep this
+   proportionate to the claim's weight.
+
+This whole step is a single inline pass by you — it does not need subagents or
+a separate review round unless the user explicitly asks for deep verification.
 
 ## Hard rules
 

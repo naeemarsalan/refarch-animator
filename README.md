@@ -23,6 +23,11 @@ steps (`page.html#step-7`) with a copy-link button.
 - **Accessible by construction** — real buttons, `aria-live` captions, full
   keyboard support, and a `prefers-reduced-motion` mode where every step still
   works without animation.
+- **Frugal by design** — pages start as a copy of the working template and are
+  edited in place (the player is boilerplate), references load only when
+  needed, geometry bugs are caught by a script instead of a review pass, and
+  font embedding splices base64 directly into the file so it never passes
+  through the model's context.
 
 ## Install
 
@@ -58,12 +63,14 @@ validating the result (`scripts/validate.py`) before shipping.
 ## Repo layout
 
 ```
-SKILL.md                        the skill: process, geometry rules, QA loop
-references/style-guide.md       visual grammar + validated light/dark palette
-references/storyboard-pattern.md  the player: steps state machine, dots, deep links
-references/template.html        small complete working example (open it in a browser)
-scripts/validate.py             tag/id/anchor/JS structural checks
-scripts/embed_fonts.py          inline Google Fonts as data-URI @font-face CSS
+SKILL.md                        the skill: process, geometry rules, bounded QA loop
+references/style-guide.md       visual grammar + validated light/dark palette (on-demand)
+references/storyboard-pattern.md  adaptation checklist for the player (on-demand)
+references/template.html        working example — generated pages start as a copy of it
+scripts/validate.py             structural checks + SVG geometry checks (overflow,
+                                paths through boxes, floating endpoints, label overlap)
+scripts/embed_fonts.py          --inject splices data-URI @font-face CSS straight into
+                                the page (base64 never enters model context)
 ```
 
 Open `references/template.html` in a browser to see the pattern running — a
