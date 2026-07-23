@@ -43,7 +43,10 @@ handle per animated counter or rapid stepping makes numbers flicker.
   `navigator.clipboard` needs a secure context (plain-HTTP hosts don't have one).
 - Arrow keys: ignored with modifiers, on interactive/scrollable targets, and
   when the player is off-screen; `preventDefault()` only when handled.
-- Dots move at constant speed (~90 px/s), not constant duration.
+- Dots move at constant speed (~90 px/s), not constant duration — but each
+  path's loop time is clamped to ≥1.4s, so dots on short edges slow down
+  instead of visibly racing the longer edges. Paths under ~120px also carry a
+  single dot rather than a crowded pair.
 - `prefers-reduced-motion`: no dots, instant tweens, stepping fully functional.
 - Autoplay stops at the last step; any manual action cancels it.
 - The caption panel keeps `aria-live="polite"`; the active dot uses

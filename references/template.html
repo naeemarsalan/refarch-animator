@@ -295,13 +295,16 @@ steps are absolute state, deep-linkable as <span class="mono">#step-N</span>.</d
       var path = $(spec[0]); if (!path) return;
       var len = path.getTotalLength();
       var plane = path.classList.contains('p1') ? 'p1' : (path.classList.contains('p3') ? 'p3' : 'p2');
-      var n = Math.max(2, Math.min(4, Math.round(len / 140)));
+      var n = Math.max(len < 120 ? 1 : 2, Math.min(4, Math.round(len / 140)));
+      /* 90 px/s, but never faster than one loop per 1.4s — short edges
+         otherwise recycle so fast they look like they're racing */
+      var pxSpeed = Math.min(90, len / 1.4);
       for (var k = 0; k < n; k++) {
         var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         c.setAttribute('class', 'anim-dot ' + plane);
         c.setAttribute('r', '5');
         dotLayer.appendChild(c);
-        animDots.push({ el: c, path: path, len: len, rev: !!spec[1], off: (k / n) + fi * 0.13, speed: 90 / len });
+        animDots.push({ el: c, path: path, len: len, rev: !!spec[1], off: (k / n) + fi * 0.13, speed: pxSpeed / len });
       }
     });
     var last = performance.now();
